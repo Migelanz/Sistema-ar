@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  ar-dashboard:
+    image: TU_USUARIO_DOCKER/ar-dashboard:v1
+    container_name: ar-dashboard-prod
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env  # 👈 Esto inyecta los secretos al contenedor
+    volumes:
+      - ./personal.sqlite:/app/personal.sqlite
+      - ./frontend/img/uploads:/app/frontend/img/uploads

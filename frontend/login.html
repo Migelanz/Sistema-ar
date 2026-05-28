@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AR Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 h-screen flex items-center justify-center">
+
+    <div class="bg-slate-800 p-8 rounded-xl shadow-2xl w-96 border border-slate-700">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-white tracking-wider">AR<span class="text-emerald-400">COMMAND</span></h1>
+            <p class="text-slate-400 text-sm mt-1">Acceso Administrativo</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-slate-300 text-sm mb-1">Usuario</label>
+                <input type="text" id="username" class="w-full bg-slate-700 text-white rounded-lg p-2.5 border border-slate-600 focus:border-emerald-400 focus:outline-none" required>
+            </div>
+            <div>
+                <label class="block text-slate-300 text-sm mb-1">Contraseña</label>
+                <input type="password" id="password" class="w-full bg-slate-700 text-white rounded-lg p-2.5 border border-slate-600 focus:border-emerald-400 focus:outline-none" required>
+            </div>
+            <p id="error-msg" class="text-red-400 text-sm text-center hidden"></p>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition-colors mt-4">
+                Ingresar al Sistema
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // ¡Login exitoso! Guardamos el token en el navegador
+                    localStorage.setItem('ar_token', data.token);
+                    window.location.href = '/admin.html'; // Redirigimos al panel
+                } else {
+                    errorMsg.textContent = data.error;
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMsg.textContent = "Error de conexión con el servidor.";
+                errorMsg.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

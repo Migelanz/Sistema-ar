@@ -1,0 +1,5 @@
+node_modules
+npm-debug.log
+.git
+frontend/img/uploads/*
+!frontend/img/uploads/default.png

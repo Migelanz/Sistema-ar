@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - Personal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-200 font-sans p-6">
+
+    <div class="max-w-5xl mx-auto flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+        <h1 class="text-2xl font-bold text-white tracking-wider">PANEL <span class="text-emerald-400">AR</span></h1>
+        <button onclick="cerrarSesion()" class="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+            Cerrar Sesión
+        </button>
+    </div>
+
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 col-span-1 h-fit">
+            <h2 id="form-title" class="text-lg font-bold text-emerald-400 mb-4">Agregar Nuevo Analista</h2>
+            <form id="form-personal" class="space-y-4">
+                <input type="hidden" id="edit-id"> <div>
+                    <label class="block text-sm mb-1 text-slate-400">Nombre Completo</label>
+                    <input type="text" id="name" required class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1 text-slate-400">Área</label>
+                    <select id="area" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white">
+                        <option value="helpdesk">Helpdesk</option>
+                        <option value="corporativo">Corporativo</option>
+                        <option value="tiendas">Tiendas</option>
+                        <option value="jefes">Jefaturas</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1 text-slate-400">Puesto</label>
+                    <input type="text" id="puesto" required class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm mb-1 text-slate-400">Extensión</label>
+                        <input type="text" id="ext" required class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1 text-slate-400">Correo</label>
+                        <input type="email" id="mail" required class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1 text-slate-400">Fotografía</label>
+                    <input type="file" id="foto" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30">
+                </div>
+                
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" id="btn-submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded transition-colors">Guardar</button>
+                    <button type="button" id="btn-cancel" onclick="resetForm()" class="hidden w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 rounded transition-colors">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 col-span-1 md:col-span-2">
+            <h2 class="text-lg font-bold text-blue-400 mb-4">Directorio Activo</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-slate-300">
+                    <thead class="text-xs text-slate-400 uppercase bg-slate-900/50">
+                        <tr>
+                            <th class="px-4 py-3 rounded-tl-lg">Foto</th>
+                            <th class="px-4 py-3">Nombre</th>
+                            <th class="px-4 py-3">Área</th>
+                            <th class="px-4 py-3 text-center rounded-tr-lg">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-body" class="divide-y divide-slate-700/50">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. SEGURIDAD: Verificar token al cargar
+        const token = localStorage.getItem('ar_token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // 2. CONFIGURACIÓN FETCH (Inyectar el Gafete)
+        const fetchSeguro = async (url, options = {}) => {
+            options.headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
+            const res = await fetch(url, options);
+            if (res.status === 401 || res.status === 403) {
+                cerrarSesion(); // Si el token caducó, te saca
+            }
+            return res;
+        };
+
+        function cerrarSesion() {
+            localStorage.removeItem('ar_token');
+            window.location.href = '/login.html';
+        }
+
+        // 3. CARGAR DATOS
+        async function cargarPersonal() {
+            const res = await fetch('/api/personal'); // Esta es pública, no requiere token
+            const data = await res.json();
+            const tbody = document.getElementById('tabla-body');
+            tbody.innerHTML = '';
+
+            data.forEach(tec => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-700/30 transition-colors">
+                        <td class="px-4 py-2"><img src="${tec.img}" class="w-10 h-10 rounded-full object-cover border border-slate-600"></td>
+                        <td class="px-4 py-2 font-medium text-white">${tec.name} <br><span class="text-xs text-slate-400">${tec.puesto}</span></td>
+                        <td class="px-4 py-2 uppercase text-xs">${tec.area}</td>
+                        <td class="px-4 py-2 text-center space-x-2">
+                            <button onclick='prepararEdicion(${JSON.stringify(tec)})' class="text-blue-400 hover:text-blue-300">Editar</button>
+                            <button onclick="borrarTecnico(${tec.id})" class="text-red-400 hover:text-red-300">Borrar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 4. PREPARAR FORMULARIO PARA EDICIÓN
+        function prepararEdicion(tec) {
+            document.getElementById('form-title').textContent = "Editar Analista";
+            document.getElementById('form-title').classList.replace('text-emerald-400', 'text-blue-400');
+            document.getElementById('btn-submit').textContent = "Actualizar Cambios";
+            document.getElementById('btn-submit').classList.replace('bg-emerald-500', 'bg-blue-500');
+            document.getElementById('btn-cancel').classList.remove('hidden');
+
+            document.getElementById('edit-id').value = tec.id;
+            document.getElementById('name').value = tec.name;
+            document.getElementById('area').value = tec.area;
+            document.getElementById('puesto').value = tec.puesto;
+            document.getElementById('ext').value = tec.ext;
+            document.getElementById('mail').value = tec.mail;
+            // La foto no es obligatoria al editar
+        }
+
+        function resetForm() {
+            document.getElementById('form-personal').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('form-title').textContent = "Agregar Nuevo Analista";
+            document.getElementById('form-title').classList.replace('text-blue-400', 'text-emerald-400');
+            document.getElementById('btn-submit').textContent = "Guardar";
+            document.getElementById('btn-submit').classList.replace('bg-blue-500', 'bg-emerald-500');
+            document.getElementById('btn-cancel').classList.add('hidden');
+        }
+
+        // 5. GUARDAR (ALTA O EDICIÓN)
+        document.getElementById('form-personal').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const idEdicion = document.getElementById('edit-id').value;
+            const formData = new FormData();
+            
+            formData.append('name', document.getElementById('name').value);
+            formData.append('area', document.getElementById('area').value);
+            formData.append('puesto', document.getElementById('puesto').value);
+            formData.append('ext', document.getElementById('ext').value);
+            formData.append('mail', document.getElementById('mail').value);
+            if (document.getElementById('foto').files[0]) {
+                formData.append('foto', document.getElementById('foto').files[0]);
+            }
+
+            const url = idEdicion ? `/api/personal/${idEdicion}` : '/api/personal';
+            const method = idEdicion ? 'PUT' : 'POST';
+
+            await fetchSeguro(url, { method: method, body: formData });
+            
+            resetForm();
+            cargarPersonal();
+        });
+
+        // 6. BORRAR
+        async function borrarTecnico(id) {
+            if (confirm('¿Estás seguro de eliminar a este integrante?')) {
+                await fetchSeguro(`/api/personal/${id}`, { method: 'DELETE' });
+                cargarPersonal();
+            }
+        }
+
+        // Iniciar
+        cargarPersonal();
+    </script>
+</body>
+</html>
