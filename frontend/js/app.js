@@ -1,35 +1,21 @@
 // --- 1. BASE DE DATOS DINÁMICA ---
-// Aquí guardaremos los datos que lleguen del servidor
 let dbPersonal = {
-    helpdesk: [],
-    corporativo: [],
-    tiendas: [],
-    jefes: []
+    helpdesk: [], corporativo: [], tiendas: [], jefes: []
 };
 
-// Función maestra para descargar el personal desde SQLite
 async function cargarPersonalDB() {
     try {
         const respuesta = await fetch('/api/personal');
         const datos = await respuesta.json();
-        
-        // Limpiamos los arreglos
         dbPersonal = { helpdesk: [], corporativo: [], tiendas: [], jefes: [] };
-        
-        // Clasificamos a cada técnico en su pestaña correspondiente
         datos.forEach(tec => {
-            if (dbPersonal[tec.area]) {
-                dbPersonal[tec.area].push(tec);
-            }
+            if (dbPersonal[tec.area]) dbPersonal[tec.area].push(tec);
         });
-        
-        // Si el panel ya está abierto, refrescamos la vista
         renderPods();
     } catch (error) {
-        console.error("❌ Error al cargar personal del servidor:", error);
+        console.error("❌ Error al cargar personal:", error);
     }
 }
-
 
 // --- 2. MOTOR HÁPTICO ---
 function triggerHaptic(type) {
@@ -38,24 +24,22 @@ function triggerHaptic(type) {
     if (type === 'success') navigator.vibrate([40, 60]); 
 }
 
-
 // --- 3. CONSUMO DE DATOS EN VIVO (GLPI/GRAFANA) ---
 let kpiDataVivos = { solicitudes: "0", incidencias: "0", sla: "0", satisfaccion: "0" };
+let currentTiempo = 'mes_actual'; // NUEVO: Filtro de tiempo por defecto
 
 async function sincronizarConGrafana() {
     const scannerText = document.querySelector('#scanner-ui p');
     try {
-        const respuesta = await fetch('/api/kpis');
+        // NUEVO: Enviamos el área y tiempo al servidor
+        const url = `/api/kpis?area=${currentAreaId}&tiempo=${currentTiempo}`;
+        const respuesta = await fetch(url);
         const datos = await respuesta.json();
         kpiDataVivos = datos;
         
         if (scannerText) {
             scannerText.innerHTML = `
-                <span style="color: #00ffcc; font-size: 16px; font-weight: bold;">✅ Conexión con GLPI Exitosa</span><br>
-                <span style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-                   Tickets Mes: ${datos.solicitudes} | SLA: ${datos.sla}%
-                </span><br>
-                <span style="font-size: 11px; color: #94a3b8;">Escanea el Patrón para ver el holograma...</span>
+                <span style="color: #00ffcc; font-size: 16px; font-weight: bold;">✅ Conexión Exitosa</span>
             `;
         }
         
@@ -64,36 +48,53 @@ async function sincronizarConGrafana() {
             renderKPIs(); animarNumeros();
         }
     } catch (error) {
-        if (scannerText) scannerText.innerHTML = `<span style="color: #ef4444;">Buscando Servidor Proxy...</span>`;
+        if (scannerText) scannerText.innerHTML = `<span style="color: #ef4444;">Buscando Servidor...</span>`;
     }
 }
 
-// Al cargar la página, traemos los KPIs y a los Técnicos
 window.addEventListener('load', () => {
     cargarPersonalDB();
     setTimeout(sincronizarConGrafana, 1000);
 });
-// Mantenemos los datos frescos cada 30 segundos
 setInterval(() => {
     sincronizarConGrafana();
     cargarPersonalDB();
 }, 30000);
 
-
 // --- 4. SISTEMA DE NAVEGACIÓN Y TABS ---
-let currentAreaId = 'helpdesk'; // Área por defecto
+let currentAreaId = 'helpdesk'; 
 let currentGroup = [];
 let tiendasPage = 0;
 
 window.switchTab = function(areaId) {
     triggerHaptic('tap'); 
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    
+    // CORRECCIÓN DEL CLICK: Iluminar botón activo sin fallar
+    const botones = document.querySelectorAll('.bottom-nav .nav-btn');
+    botones.forEach(btn => btn.classList.remove('active'));
+    botones.forEach(btn => {
+        if(btn.getAttribute('onclick').includes(areaId)) btn.classList.add('active');
+    });
     
     currentAreaId = areaId;
     tiendasPage = 0;
     
     renderPods();
+    sincronizarConGrafana(); // Actualizamos KPIs al cambiar de área
+};
+
+// NUEVO: CONTROL DE TIEMPO
+window.switchTiempo = function(tiempo) {
+    triggerHaptic('tap');
+    currentTiempo = tiempo;
+    
+    document.getElementById('btn-tiempo-mes_actual').classList.remove('active');
+    document.getElementById('btn-tiempo-mes_pasado').classList.remove('active');
+    document.getElementById('btn-tiempo-ano').classList.remove('active');
+    
+    document.getElementById('btn-tiempo-' + tiempo).classList.add('active');
+    
+    sincronizarConGrafana(); // Actualizamos KPIs al cambiar tiempo
 };
 
 function renderPods() {
@@ -101,11 +102,20 @@ function renderPods() {
     if (!container) return;
     container.innerHTML = ''; 
     
-    // Obtenemos los técnicos dinámicos del área seleccionada
+    // NUEVO: Ocultar personal si es la pestaña de Líderes
+    if (currentAreaId === 'jefes') {
+        container.innerHTML = `
+            <div style="text-align: center; margin-top: 25px; color: white; grid-column: span 2;">
+                <h2 style="color: #00ffcc; font-size: 1.2rem; margin-bottom: 5px;">📊 Vista Consolidada</h2>
+                <p style="opacity: 0.8; font-size: 0.8rem; padding: 0 10px;">Mostrando KPIs globales de las áreas.</p>
+            </div>
+        `;
+        return;
+    }
+
     currentGroup = dbPersonal[currentAreaId] || [];
     let itemsToRender = currentGroup;
     
-    // Carrusel especial solo para tiendas (si hay muchos)
     if (currentAreaId === 'tiendas' && currentGroup.length > 4) {
         itemsToRender = currentGroup.slice(tiendasPage * 4, (tiendasPage + 1) * 4);
     }
@@ -117,7 +127,6 @@ function renderPods() {
 
     const podsHTML = itemsToRender.map((tech, index) => {
         const delay = index * 0.05;
-        // tech.name y tech.puesto vienen directos de SQLite
         const nombreCorto = tech.name.split(' ')[0] + ' ' + (tech.name.split(' ')[1] || '');
         const puestoCorto = tech.puesto.split(' ')[0] + ' ' + (tech.puesto.split(' ')[1] || '');
         
@@ -131,24 +140,18 @@ function renderPods() {
             </div>
         `;
     }).join('');
-    
     container.innerHTML = podsHTML;
 }
 
 window.abrirPodPorIndex = function(index) {
     triggerHaptic('tap'); 
     let tech = currentGroup[index];
-    
     if (currentAreaId === 'tiendas' && currentGroup.length > 4) {
         tech = currentGroup[tiendasPage * 4 + index];
     }
-    
-    if (tech) {
-        abrirModalTecnico(tech);
-    }
+    if (tech) abrirModalTecnico(tech);
 };
 
-// Rotación del carrusel de tiendas
 setInterval(() => {
     if (currentAreaId === 'tiendas' && currentGroup.length > 4) {
         tiendasPage = (tiendasPage + 1) % Math.ceil(currentGroup.length / 4);
@@ -156,8 +159,7 @@ setInterval(() => {
     }
 }, 4500);
 
-
-// --- 5. RENDERIZADO DE MÉTRICAS ---
+// --- 5. RENDERIZADO DE MÉTRICAS (Tus estilos originales) ---
 function renderKPIs() {
     const kpiSection = document.querySelector('.kpi-section');
     if (!kpiSection) return;
@@ -166,7 +168,7 @@ function renderKPIs() {
         <div class="kpi-card kpi-azure">
             <div class="kpi-header"><span class="kpi-label">Solicitudes</span><span class="kpi-icon">📋</span></div>
             <div class="kpi-value count-up" data-target="${kpiDataVivos.solicitudes}">0</div>
-            <div class="kpi-sub">Recibidos este mes</div>
+            <div class="kpi-sub">Total de tickets</div>
         </div>
         <div class="kpi-card kpi-emerald">
             <div class="kpi-header"><span class="kpi-label">Cerrados</span><span class="kpi-icon">🛠️</span></div>
@@ -181,7 +183,7 @@ function renderKPIs() {
         <div class="kpi-card kpi-purple">
             <div class="kpi-header"><span class="kpi-label">Calificación</span><span class="kpi-icon">🌟</span></div>
             <div class="kpi-value count-up" data-target="${kpiDataVivos.satisfaccion}" data-suffix="/5" data-decimal="true">0/5</div>
-            <div class="kpi-sub">Encuestas de servicio</div>
+            <div class="kpi-sub">Encuestas</div>
         </div>
     `;
 }
@@ -201,7 +203,6 @@ function animarNumeros() {
     });
 }
 
-
 // --- 6. PARALLAX Y MODALES ---
 function initParallax() {
     const ui = document.getElementById('spatial-ui');
@@ -218,13 +219,11 @@ function initParallax() {
 window.abrirModalTecnico = function(tech) {
     const modal = document.getElementById('tech-modal');
     document.getElementById('tech-modal-overlay').style.display = 'block';
-    
     document.getElementById('modal-img').style.backgroundImage = `url('${tech.img}')`;
     document.getElementById('modal-name').textContent = tech.name;
     document.getElementById('modal-puesto').textContent = tech.puesto;
     document.getElementById('modal-ext').textContent = `Ext: ${tech.ext}`;
     document.getElementById('modal-mail').textContent = tech.mail;
-    
     setTimeout(() => modal.classList.add('show'), 10);
 };
 
@@ -232,7 +231,6 @@ window.cerrarModalTecnico = function() {
     document.getElementById('tech-modal').classList.remove('show');
     setTimeout(() => document.getElementById('tech-modal-overlay').style.display = 'none', 300);
 };
-
 
 // --- 7. REGISTRO ARJS MOTOR ---
 AFRAME.registerComponent('activar-dashboard', {
@@ -247,7 +245,6 @@ AFRAME.registerComponent('activar-dashboard', {
                 scannerUI.style.display = 'none';
                 overlayLayer.style.display = 'flex';
                 
-                // Forzamos el render inicial con el área de Helpdesk
                 currentAreaId = 'helpdesk';
                 renderPods(); 
                 renderKPIs(); animarNumeros();

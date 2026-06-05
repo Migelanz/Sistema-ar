@@ -22,6 +22,13 @@
             
             <div class="glass-panel central-panel">
                 <div class="header-logo">Price Shoes <br><span>Soporte TI En Vivo</span></div>
+                
+                <div style="display: flex; gap: 5px; margin-bottom: 15px; justify-content: center;">
+                    <button id="btn-tiempo-mes_actual" class="nav-btn active" onclick="switchTiempo('mes_actual')" style="font-size: 11px; padding: 5px 10px; border: 1px solid rgba(255,255,255,0.2);">Mes Actual</button>
+                    <button id="btn-tiempo-mes_pasado" class="nav-btn" onclick="switchTiempo('mes_pasado')" style="font-size: 11px; padding: 5px 10px; border: 1px solid rgba(255,255,255,0.2);">Mes Pasado</button>
+                    <button id="btn-tiempo-ano" class="nav-btn" onclick="switchTiempo('ano')" style="font-size: 11px; padding: 5px 10px; border: 1px solid rgba(255,255,255,0.2);">Este Año</button>
+                </div>
+
                 <div class="kpi-section"></div>
             </div>
 
@@ -31,7 +38,7 @@
                 <button class="nav-btn active" onclick="switchTab('helpdesk')"><span>🎧</span> Helpdesk</button>
                 <button class="nav-btn" onclick="switchTab('corporativo')"><span>🏢</span> Corpo</button>
                 <button class="nav-btn" onclick="switchTab('tiendas')"><span>🏪</span> Tiendas</button>
-                <button class="nav-btn" onclick="switchTab('jefes')"><span>👨‍💼</span> Jefes</button>
+                <button class="nav-btn" onclick="switchTab('jefes')"><span>👨‍💼</span> Lideres</button>
             </div>
             
         </div>
