@@ -1,20 +1,21 @@
-# Usamos una versión ligera de Node.js
+# Imagen ligera de Node.js
 FROM node:18-alpine
 
-# Creamos el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copiamos primero los archivos de dependencias para optimizar la caché
+# Copiamos primero los manifiestos para aprovechar la caché de capas
 COPY backend/package*.json ./backend/
 
-# Instalamos las librerías necesarias del backend
-RUN cd backend && npm install
+# Instalación reproducible desde el lockfile (omite devDependencies)
+RUN cd backend && npm install --omit=dev
 
-# Copiamos TODO el proyecto (esto asegura que el Frontend entre al contenedor)
+# Copiamos el resto del proyecto
 COPY . .
 
-# Exponemos el puerto correcto donde vive nuestra API
+# Ejecutamos como usuario sin privilegios (el de node:alpine)
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3001
 
-# Comando para encender el servidor apuntando a la ruta correcta
 CMD ["node", "backend/server.js"]

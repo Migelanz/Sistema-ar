@@ -1,2 +1,7 @@
 node_modules/
 .env
+*.exe
+*.log
+npm-debug.log
+frontend/img/uploads/*
+!frontend/img/uploads/.gitkeep

@@ -1,14 +1,20 @@
-version: '3.8'
-
 services:
   ar-dashboard:
-    image: TU_USUARIO_DOCKER/ar-dashboard:v1
+    build: .
+    image: ar-dashboard:latest
     container_name: ar-dashboard-prod
     restart: unless-stopped
     ports:
       - "3001:3001"
     env_file:
-      - .env  # 👈 Esto inyecta los secretos al contenedor
+      - .env
     volumes:
-      - ./personal.sqlite:/app/personal.sqlite
+      # La DB real vive en backend/. Se monta para que persista fuera del contenedor.
+      - ./backend/personal.sqlite:/app/backend/personal.sqlite
       - ./frontend/img/uploads:/app/frontend/img/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/personal"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -107,19 +107,40 @@
             const tbody = document.getElementById('tabla-body');
             tbody.innerHTML = '';
 
-            data.forEach(tec => {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-700/30 transition-colors">
-                        <td class="px-4 py-2"><img src="${tec.img}" class="w-10 h-10 rounded-full object-cover border border-slate-600"></td>
-                        <td class="px-4 py-2 font-medium text-white">${tec.name} <br><span class="text-xs text-slate-400">${tec.puesto}</span></td>
-                        <td class="px-4 py-2 uppercase text-xs">${tec.area}</td>
-                        <td class="px-4 py-2 text-center space-x-2">
-                            <button onclick='prepararEdicion(${JSON.stringify(tec)})' class="text-blue-400 hover:text-blue-300">Editar</button>
-                            <button onclick="borrarTecnico(${tec.id})" class="text-red-400 hover:text-red-300">Borrar</button>
-                        </td>
-                    </tr>
-                `;
-            });
+           data.forEach(tec => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-700/30 transition-colors';
+
+    const tdFoto = document.createElement('td');
+    tdFoto.className = 'px-4 py-2';
+    const img = document.createElement('img');
+    img.src = tec.img;
+    img.className = 'w-10 h-10 rounded-full object-cover border border-slate-600';
+    tdFoto.appendChild(img);
+
+    const tdNombre = document.createElement('td');
+    tdNombre.className = 'px-4 py-2 font-medium text-white';
+    tdNombre.textContent = tec.name; // textContent escapa HTML automáticamente
+
+    const tdArea = document.createElement('td');
+    tdArea.className = 'px-4 py-2 uppercase text-xs';
+    tdArea.textContent = tec.area;
+
+    const tdAcciones = document.createElement('td');
+    tdAcciones.className = 'px-4 py-2 text-center space-x-2';
+    const btnEditar = document.createElement('button');
+    btnEditar.textContent = 'Editar';
+    btnEditar.className = 'text-blue-400 hover:text-blue-300';
+    btnEditar.onclick = () => prepararEdicion(tec);
+    const btnBorrar = document.createElement('button');
+    btnBorrar.textContent = 'Borrar';
+    btnBorrar.className = 'text-red-400 hover:text-red-300';
+    btnBorrar.onclick = () => borrarTecnico(tec.id);
+    tdAcciones.append(btnEditar, btnBorrar);
+
+    tr.append(tdFoto, tdNombre, tdArea, tdAcciones);
+    tbody.appendChild(tr);
+});
         }
 
         // 4. PREPARAR FORMULARIO PARA EDICIÓN
