@@ -52,9 +52,33 @@ async function sincronizarConGrafana() {
     }
 }
 
+// --- ENTRADA AL DASHBOARD (reutilizable: marcador o automatica) ---
+function entrarDashboard() {
+    const overlay = document.getElementById('ui-overlay');
+    const scanner = document.getElementById('scanner-ui');
+    if (!overlay || overlay.style.display === 'flex') return; // ya esta abierto
+    triggerHaptic('success');
+    if (scanner) scanner.style.display = 'none';
+    overlay.style.display = 'flex';
+    currentAreaId = 'helpdesk';
+    renderPods();
+    renderKPIs();
+    animarNumeros();
+}
+
 window.addEventListener('load', () => {
     cargarPersonalDB();
     setTimeout(sincronizarConGrafana, 1000);
+
+    // AUTO-ARRANQUE AR: en cuanto la camara este lista, mostramos el dashboard
+    // flotando sobre el video en vivo, sin necesidad de escanear el marcador.
+    const scene = document.querySelector('a-scene');
+    if (scene) {
+        scene.addEventListener('arjs-video-loaded', () => setTimeout(entrarDashboard, 600));
+        scene.addEventListener('loaded', () => setTimeout(entrarDashboard, 2500));
+    }
+    // Respaldo final por si los eventos de AR no disparan en algun navegador
+    setTimeout(entrarDashboard, 4000);
 });
 setInterval(() => {
     sincronizarConGrafana();
@@ -62,9 +86,10 @@ setInterval(() => {
 }, 30000);
 
 // --- 4. SISTEMA DE NAVEGACIÓN Y TABS ---
-let currentAreaId = 'helpdesk'; 
+const PODS_POR_PAGINA = 4;
+let currentAreaId = 'helpdesk';
 let currentGroup = [];
-let tiendasPage = 0;
+let currentPage = 0;
 
 window.switchTab = function(areaId) {
     triggerHaptic('tap'); 
@@ -77,7 +102,7 @@ window.switchTab = function(areaId) {
     });
     
     currentAreaId = areaId;
-    tiendasPage = 0;
+    currentPage = 0;
     
     renderPods();
     sincronizarConGrafana(); // Actualizamos KPIs al cambiar de área
@@ -100,36 +125,40 @@ window.switchTiempo = function(tiempo) {
 function renderPods() {
     const container = document.getElementById('pods-container');
     if (!container) return;
-    container.innerHTML = ''; 
-    
-    // NUEVO: Ocultar personal si es la pestaña de Líderes
-    if (currentAreaId === 'jefes') {
-        container.innerHTML = `
-            <div style="text-align: center; margin-top: 25px; color: white; grid-column: span 2;">
-                <h2 style="color: #00ffcc; font-size: 1.2rem; margin-bottom: 5px;">📊 Vista Consolidada</h2>
-                <p style="opacity: 0.8; font-size: 0.8rem; padding: 0 10px;">Mostrando KPIs globales de las áreas.</p>
-            </div>
-        `;
-        return;
-    }
+    container.innerHTML = '';
 
     currentGroup = dbPersonal[currentAreaId] || [];
-    let itemsToRender = currentGroup;
-    
-    if (currentAreaId === 'tiendas' && currentGroup.length > 4) {
-        itemsToRender = currentGroup.slice(tiendasPage * 4, (tiendasPage + 1) * 4);
+
+    // Encabezado especial para Líderes (los KPIs de arriba ya son consolidados)
+    const esLideres = currentAreaId === 'jefes';
+    let html = '';
+    if (esLideres) {
+        html += `
+            <div class="pods-heading">
+                <h2>👑 Líderes de Área</h2>
+                <p>KPIs consolidados de todas las áreas</p>
+            </div>`;
     }
-    
-    if (itemsToRender.length === 0) {
-        container.innerHTML = `<p style="width: 100%; text-align: center; color: #94a3b8; font-size: 11px; grid-column: span 2; margin-top: 20px;">No hay personal asignado a esta área.</p>`;
+
+    // Estado vacío
+    if (currentGroup.length === 0) {
+        container.innerHTML = html + `<p class="pods-empty">No hay personal asignado a esta área.</p>`;
         return;
     }
 
-    const podsHTML = itemsToRender.map((tech, index) => {
+    // Paginación genérica: cualquier área con más de 4 rota sus tarjetas
+    const totalPaginas = Math.ceil(currentGroup.length / PODS_POR_PAGINA);
+    if (currentPage >= totalPaginas) currentPage = 0;
+    const itemsToRender = totalPaginas > 1
+        ? currentGroup.slice(currentPage * PODS_POR_PAGINA, (currentPage + 1) * PODS_POR_PAGINA)
+        : currentGroup;
+
+    html += itemsToRender.map((tech, index) => {
         const delay = index * 0.05;
-        const nombreCorto = tech.name.split(' ')[0] + ' ' + (tech.name.split(' ')[1] || '');
-        const puestoCorto = tech.puesto.split(' ')[0] + ' ' + (tech.puesto.split(' ')[1] || '');
-        
+        const partesN = (tech.name || '').split(' ');
+        const nombreCorto = (partesN[0] || '') + ' ' + (partesN[1] || '');
+        const partesP = (tech.puesto || '').split(' ');
+        const puestoCorto = (partesP[0] || '') + ' ' + (partesP[1] || '');
         return `
             <div class="pod-item" style="animation-delay: ${delay}s" onclick="abrirPodPorIndex(${index})">
                 <div class="pod-glass" style="background-image: url('${tech.img}')"></div>
@@ -137,24 +166,32 @@ function renderPods() {
                     <h4>${nombreCorto}</h4>
                     <p>${puestoCorto}</p>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
-    container.innerHTML = podsHTML;
+
+    // Puntos de paginación
+    if (totalPaginas > 1) {
+        let dots = '';
+        for (let p = 0; p < totalPaginas; p++) dots += `<i class="${p === currentPage ? 'on' : ''}"></i>`;
+        html += `<div class="pods-dots">${dots}</div>`;
+    }
+
+    container.innerHTML = html;
 }
 
 window.abrirPodPorIndex = function(index) {
-    triggerHaptic('tap'); 
-    let tech = currentGroup[index];
-    if (currentAreaId === 'tiendas' && currentGroup.length > 4) {
-        tech = currentGroup[tiendasPage * 4 + index];
-    }
+    triggerHaptic('tap');
+    const totalPaginas = Math.ceil(currentGroup.length / PODS_POR_PAGINA);
+    const tech = totalPaginas > 1
+        ? currentGroup[currentPage * PODS_POR_PAGINA + index]
+        : currentGroup[index];
     if (tech) abrirModalTecnico(tech);
 };
 
 setInterval(() => {
-    if (currentAreaId === 'tiendas' && currentGroup.length > 4) {
-        tiendasPage = (tiendasPage + 1) % Math.ceil(currentGroup.length / 4);
+    const totalPaginas = Math.ceil(currentGroup.length / PODS_POR_PAGINA);
+    if (totalPaginas > 1) {
+        currentPage = (currentPage + 1) % totalPaginas;
         renderPods();
     }
 }, 4500);
@@ -240,15 +277,7 @@ AFRAME.registerComponent('activar-dashboard', {
         initParallax();
         
         this.el.addEventListener('markerFound', () => {
-            if (overlayLayer.style.display !== 'flex') {
-                triggerHaptic('success'); 
-                scannerUI.style.display = 'none';
-                overlayLayer.style.display = 'flex';
-                
-                currentAreaId = 'helpdesk';
-                renderPods(); 
-                renderKPIs(); animarNumeros();
-            }
+            entrarDashboard(); // mismo flujo que la entrada automatica
         });
     }
 });
