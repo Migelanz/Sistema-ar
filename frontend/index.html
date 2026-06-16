@@ -2,27 +2,39 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>AR Dashboard - TI Espacial Pro</title>
-    
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    
-    <link rel="stylesheet" href="css/styles.css?v=25">
-    <script src="js/app.js?v=25"></script>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <title>AR Dashboard - Soporte TI</title>
+    <link rel="stylesheet" href="css/styles.css?v=27">
+    <script src="js/app.js?v=27" defer></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
+<body>
 
-    <div id="scanner-ui" class="scanner-container" style="background: transparent; border: none;">
+    <!-- Cámara en vivo de fondo (se activa al tocar Iniciar) -->
+    <video id="cam-feed" autoplay playsinline muted></video>
+    <div id="cam-dim"></div>
+
+    <!-- Pantalla de inicio / permiso de cámara -->
+    <div id="scanner-ui" class="scanner-container">
+        <div class="intro-card">
+            <div class="intro-logo">📊</div>
+            <h1 id="intro-greet">Hola 👋</h1>
+            <p class="intro-brand">Price Shoes · Soporte TI</p>
+            <p class="intro-sub">Panel de indicadores en Realidad Aumentada</p>
+            <button class="btn-iniciar" onclick="iniciarExperiencia()">▶ Iniciar experiencia</button>
+            <p id="intro-status" class="intro-status"></p>
+        </div>
     </div>
 
+    <!-- Overlay del dashboard -->
     <div id="ui-overlay" class="viewport-overlay" style="display: none;">
-        
         <div id="spatial-ui" class="spatial-wrapper">
-            
+
             <div class="glass-panel central-panel">
-                <div class="header-logo">Price Shoes <br><span>Soporte TI En Vivo</span></div>
-                
+                <div class="header-row">
+                    <div class="header-logo">Price Shoes <br><span id="live-status"><i class="live-dot"></i> Soporte TI En Vivo</span></div>
+                    <button id="btn-refresh" class="btn-refresh" onclick="refrescarDatos()" title="Actualizar" aria-label="Actualizar">⟳</button>
+                </div>
+
                 <div class="time-filters">
                     <button id="btn-tiempo-mes_actual" class="nav-btn active" onclick="switchTiempo('mes_actual')">Mes Actual</button>
                     <button id="btn-tiempo-mes_pasado" class="nav-btn" onclick="switchTiempo('mes_pasado')">Mes Pasado</button>
@@ -30,6 +42,7 @@
                 </div>
 
                 <div class="kpi-section"></div>
+                <div id="last-updated" class="last-updated"></div>
             </div>
 
             <div id="pods-container" class="glass-panel pods-layer-rect"></div>
@@ -40,10 +53,11 @@
                 <button class="nav-btn" onclick="switchTab('tiendas')"><span>🏪</span> Tiendas</button>
                 <button class="nav-btn" onclick="switchTab('jefes')"><span>👨‍💼</span> Lideres</button>
             </div>
-            
+
         </div>
     </div>
 
+    <!-- Modal técnico -->
     <div id="tech-modal-overlay" class="modal-overlay" style="display: none;">
         <div id="tech-modal" class="tech-modal">
             <button class="modal-close" onclick="cerrarModalTecnico()">×</button>
@@ -56,11 +70,6 @@
             </div>
         </div>
     </div>
-
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
-        <a-marker type="pattern" url="dashboard.patt" activar-dashboard></a-marker>
-        <a-entity camera></a-entity>
-    </a-scene>
 
 </body>
 </html>
