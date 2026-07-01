@@ -68,6 +68,8 @@ function entrarDashboard() {
     triggerHaptic('success');
     if (scanner) scanner.style.display = 'none';
     overlay.style.display = 'flex';
+    const wa = document.getElementById('wa-fab');
+    if (wa) wa.style.display = 'flex';
     currentAreaId = 'helpdesk';
     renderPods();
     renderKPIs();
@@ -219,14 +221,15 @@ function renderPods() {
     // Se muestran TODOS; el panel hace scroll vertical si no caben.
     html += currentGroup.map((tech, index) => {
         const delay = Math.min(index, 8) * 0.05;
-        const partesN = (tech.name || '').split(' ');
-        const nombreCorto = (partesN[0] || '') + ' ' + (partesN[1] || '');
+        const partesN = (tech.name || '').trim().split(/\s+/);
+        // En lista de una columna hay ancho: nombre + primer apellido (o completo si es corto)
+        const nombre = partesN.length <= 3 ? (tech.name || '') : `${partesN[0]} ${partesN[1]} ${partesN[2]}`;
         const puesto = tech.puesto || '';
         return `
             <div class="pod-item" style="animation-delay: ${delay}s" onclick="abrirPodPorIndex(${index})">
                 <div class="pod-glass" style="background-image: url('${tech.img}')"></div>
                 <div class="pod-info">
-                    <h4>${nombreCorto}</h4>
+                    <h4>${nombre}</h4>
                     <p>${puesto}</p>
                 </div>
             </div>`;
