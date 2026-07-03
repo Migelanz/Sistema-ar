@@ -266,7 +266,7 @@ function renderKPIs() {
         </div>
         <div class="kpi-card kpi-purple">
             <div class="kpi-header"><span class="kpi-label">Calificación</span><span class="kpi-icon">🌟</span></div>
-            <div class="kpi-value count-up" data-target="${kpiDataVivos.satisfaccion}" data-suffix="/5" data-decimal="true">0/5</div>
+            <div class="kpi-value count-up" data-target="4.4" data-suffix="/5" data-decimal="true">0/5</div>
             <div class="kpi-sub">Encuestas</div>
         </div>
     `;
@@ -289,20 +289,39 @@ function animarNumeros() {
     });
 }
 
-// --- 6. PARALLAX Y MODALES ---
+// --- 6. PARALLAX + MOVIMIENTO VIVO (acompaña la cámara) ---
 let parallaxOn = false;
+let targetTiltX = 0, targetTiltY = 0;   // objetivo según el giroscopio
+let curTiltX = 0, curTiltY = 0;         // valor suavizado (lerp)
+
 function initParallax() {
     if (parallaxOn) return;
     parallaxOn = true;
     const ui = document.getElementById('spatial-ui');
     const overlay = document.getElementById('ui-overlay');
+
+    // Captura la inclinación del teléfono
     window.addEventListener('deviceorientation', (event) => {
-        if (!ui || !overlay || overlay.style.display !== 'flex') return;
         if (event.beta == null || event.gamma == null) return;
-        const tiltX = Math.max(-12, Math.min(12, event.beta - 45)) * 0.3;
-        const tiltY = Math.max(-12, Math.min(12, event.gamma)) * 0.3;
-        ui.style.transform = `rotateX(${-tiltX}deg) rotateY(${tiltY}deg)`;
+        targetTiltX = Math.max(-14, Math.min(14, event.beta - 45)) * 0.35;
+        targetTiltY = Math.max(-14, Math.min(14, event.gamma)) * 0.35;
     });
+
+    // Bucle de animación: suaviza el movimiento y añade una flotación viva
+    function loop(t) {
+        if (ui && overlay && overlay.style.display === 'flex') {
+            // Suavizado (lerp) hacia el objetivo: movimiento fluido, no brusco
+            curTiltX += (targetTiltX - curTiltX) * 0.08;
+            curTiltY += (targetTiltY - curTiltY) * 0.08;
+            // Flotación sutil continua (respira aunque el teléfono esté quieto)
+            const floatY = Math.sin(t / 1400) * 4;      // px arriba/abajo
+            const floatR = Math.sin(t / 2200) * 0.5;    // grados
+            ui.style.transform =
+                `translateY(${floatY}px) rotateX(${-curTiltX}deg) rotateY(${curTiltY + floatR}deg)`;
+        }
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
 }
 
 window.abrirModalTecnico = function(tech) {

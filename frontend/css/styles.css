@@ -49,7 +49,9 @@ body {
     width: 100% !important; height: 100% !important;
     display: flex; align-items: center; justify-content: center;
     z-index: 500; pointer-events: none;
-    padding: max(2vh, env(safe-area-inset-top)) 0 max(2vh, env(safe-area-inset-bottom));
+    /* El padding inferior reserva una franja para el botón flotante:
+       así el panel NUNCA se encima con el botón de WhatsApp. */
+    padding: max(2vh, env(safe-area-inset-top)) 0 calc(env(safe-area-inset-bottom) + 4.8em);
 }
 
 /* ---------- DASHBOARD ELÁSTICO ----------
@@ -285,14 +287,19 @@ html, body {
 .wa-fab {
     position: fixed; z-index: 900;
     right: max(1.1em, env(safe-area-inset-right));
-    bottom: max(1.6em, env(safe-area-inset-bottom));
+    bottom: max(1.1em, env(safe-area-inset-bottom));
     display: flex; align-items: center; gap: 0.5em;
-    padding: 0.7em 1em 0.7em 0.85em; border-radius: 2em;
+    padding: 0.7em 1.05em 0.7em 0.9em; border-radius: 2em;
     background: linear-gradient(135deg, #25d366, #128c7e);
-    color: #fff; font-weight: 700; font-size: 14px; text-decoration: none;
+    color: #fff; font-weight: 700; font-size: 13.5px; text-decoration: none;
     box-shadow: 0 0.5em 1.2em rgba(18, 140, 126, 0.5);
-    pointer-events: auto; animation: waIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    pointer-events: auto;
+    animation: waIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both, waPulse 2.6s ease-in-out 1s infinite;
 }
 .wa-fab:active { transform: scale(0.95); }
 .wa-fab svg { flex-shrink: 0; }
 @keyframes waIn { from { opacity: 0; transform: translateY(1em) scale(0.8); } to { opacity: 1; transform: none; } }
+@keyframes waPulse {
+    0%, 100% { box-shadow: 0 0.5em 1.2em rgba(18,140,126,0.5), 0 0 0 0 rgba(37,211,102,0.55); }
+    50%      { box-shadow: 0 0.5em 1.2em rgba(18,140,126,0.5), 0 0 0 0.7em rgba(37,211,102,0); }
+}
