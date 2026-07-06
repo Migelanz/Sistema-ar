@@ -1,0 +1,52 @@
+# Producción endurecida: app + túnel Cloudflare + monitoreo (Uptime Kuma).
+#   docker compose -f docker-compose.prod.yml up -d --build
+services:
+  ar-dashboard:
+    build: .
+    image: ar-dashboard:prod
+    container_name: ar-dashboard-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"     # solo escucha en localhost; sale por el túnel
+    env_file: [.env]
+    volumes:
+      - ./backend/personal.sqlite:/app/backend/personal.sqlite
+      - ./frontend/img/uploads:/app/frontend/img/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 512M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  # Túnel Cloudflare: HTTPS real con tu dominio, SIN aviso de Ngrok y sin abrir puertos.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on: [ar-dashboard]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Monitoreo + alarmas (Telegram/email/webhook) desde una UI web en :3005
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3005:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+volumes:
+  uptime-kuma-data:

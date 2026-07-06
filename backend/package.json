@@ -1,21 +1,23 @@
 {
   "name": "ar-dashboard-backend",
-  "version": "1.0.0",
-  "description": "Proxy de datos para Grafana y GLPI",
+  "version": "2.0.0",
+  "description": "Backend de KPIs (GLPI/Grafana) endurecido para producción",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "hash": "node -e \"const b=require('bcryptjs');b.hash(process.argv[1]||'',12).then(h=>console.log(h))\""
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
+  "engines": { "node": ">=18.0.0" },
   "dependencies": {
     "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.5",
     "express": "^4.19.2",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.0",
     "multer": "^2.1.1",
     "sqlite3": "^6.0.1"
   }
